@@ -1,0 +1,109 @@
+services:
+  # 🚨 Alertmanager 告警
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    networks:
+      - default
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+
+  # 🧠 Node Exporter（主机监控）
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: ne
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    pid: "host"
+    networks:
+      - default
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+
+  mysql:
+    image: mysql:5.7
+    container_name: mysql
+    restart: unless-stopped
+    networks:
+      - default
+    volumes:
+      - './db_data:/var/lib/mysql'
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    entrypoint: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379"
+    networks:
+      - default
+    volumes:
+      - './redis_data:/data'
+      - '/etc/timezone:/etc/timezone:ro'
+
+  wordpress:
+    depends_on:
+      - mysql
+      - redis
+    image: wordpress:latest
+    container_name: wp
+    ports:
+      - "8000:80"
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_REDIS_HOST','redis');
+        define('WP_REDIS_PORT','6379');
+        define('WP_REDIS_PASSWORD','${REDIS_PASSWORD}');
+        define('WP_CACHE_KEY_SALT','${WP_CACHE_KEY_SALT}');
+        define('WP_CACHE',true);
+        # define('WP_HOME', 'http://${WP_HOME}');
+        # define('WP_SITEURL', 'http://${WP_SITEURL}');
+        # define('WP_ADMIN_DIR', '${WP_ADMIN_DIR}');
+        # define('DISALLOW_FILE_EDIT', true);
+        # define('DISALLOW_FILE_MODS', true);
+        # $request_uri = is_array($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'][0] : $_SERVER['REQUEST_URI'];
+        # if ($_SERVER['HTTP_HOST'] !== '${WP_SITEURL}' && strpos($request_uri, 'wp-admin') !== false) {
+        #     header('Location: http://' . '${WP_SITEURL}' . '/${WP_ADMIN_DIR}');
+        #     exit();
+        # }
+        # define('AUTH_KEY',         '${AUTH_KEY}');
+        # define('SECURE_AUTH_KEY',  '${SECURE_AUTH_KEY}');
+        # define('LOGGED_IN_KEY',    '${LOGGED_IN_KEY}');
+        # define('NONCE_KEY',        '${NONCE_KEY}');
+        # define('AUTH_SALT',        '${AUTH_SALT}');
+        # define('SECURE_AUTH_SALT', '${SECURE_AUTH_SALT}');
+        # define('LOGGED_IN_SALT',   '${LOGGED_IN_SALT}');
+        # define('NONCE_SALT',       '${NONCE_SALT}');
+
+      REDIS_HOST: redis
+    volumes:
+      - './wp_content:/var/www/html/wp-content'
+      #- './custom-plugins:/var/www/html/wp-content/plugins'
+
+
+networks:
+  default:
+    name: wordpress
