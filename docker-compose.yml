@@ -1,0 +1,46 @@
+services:
+  db:
+    image: mysql:5.7
+    volumes:
+      - './db_data:/var/lib/mysql'
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+  redis:
+    image: redis:latest
+    restart: always
+    entrypoint: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379"
+    volumes:
+      - './redis_data:/data'
+      - '/etc/timezone:/etc/timezone:ro'
+
+  wordpress:
+    depends_on:
+      - db
+      - redis
+    image: wordpress:latest
+    ports:
+      - "8000:80"
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+      WORDPRESS_CONFIG_EXTRA: |
+        /* Redis configuration */
+        define('WP_REDIS_HOST','redis');
+        define('WP_REDIS_PORT','6379');
+        define('WP_REDIS_PASSWORD','${REDIS_PASSWORD}');
+        define('WP_CACHE_KEY_SALT','${CACHE_KEY_SALT}');
+        define('WP_CACHE',true);
+      REDIS_HOST: redis
+    volumes:
+      - './wp_content:/var/www/html/wp-content'
+
