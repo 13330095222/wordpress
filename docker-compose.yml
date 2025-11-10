@@ -1,17 +1,4 @@
 services:
-  # 🚨 Alertmanager 告警
-  alertmanager:
-    image: prom/alertmanager:latest
-    container_name: alertmanager
-    restart: unless-stopped
-    ports:
-      - "9093:9093"
-    networks:
-      - default
-    volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanager-data:/alertmanager
-
   # 🧠 Node Exporter（主机监控）
   node-exporter:
     image: prom/node-exporter:latest
@@ -79,25 +66,7 @@ services:
         define('WP_REDIS_PASSWORD','${REDIS_PASSWORD}');
         define('WP_CACHE_KEY_SALT','${WP_CACHE_KEY_SALT}');
         define('WP_CACHE',true);
-        # define('WP_HOME', 'http://${WP_HOME}');
-        # define('WP_SITEURL', 'http://${WP_SITEURL}');
-        # define('WP_ADMIN_DIR', '${WP_ADMIN_DIR}');
-        # define('DISALLOW_FILE_EDIT', true);
-        # define('DISALLOW_FILE_MODS', true);
-        # $request_uri = is_array($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'][0] : $_SERVER['REQUEST_URI'];
-        # if ($_SERVER['HTTP_HOST'] !== '${WP_SITEURL}' && strpos($request_uri, 'wp-admin') !== false) {
-        #     header('Location: http://' . '${WP_SITEURL}' . '/${WP_ADMIN_DIR}');
-        #     exit();
-        # }
-        # define('AUTH_KEY',         '${AUTH_KEY}');
-        # define('SECURE_AUTH_KEY',  '${SECURE_AUTH_KEY}');
-        # define('LOGGED_IN_KEY',    '${LOGGED_IN_KEY}');
-        # define('NONCE_KEY',        '${NONCE_KEY}');
-        # define('AUTH_SALT',        '${AUTH_SALT}');
-        # define('SECURE_AUTH_SALT', '${SECURE_AUTH_SALT}');
-        # define('LOGGED_IN_SALT',   '${LOGGED_IN_SALT}');
-        # define('NONCE_SALT',       '${NONCE_SALT}');
-
+        
       REDIS_HOST: redis
     volumes:
       - './wp_content:/var/www/html/wp-content'
